@@ -1,0 +1,758 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>基于html5的俄罗斯方块</title>
+<style type="text/css">
+/* 最简单的reset */
+*{margin:0; padding:0}
+/* 主体区域的css */
+.game{width:590px;margin:50px auto;position:relative; background:url(bg.jpg); padding:15px;-webkit-box-shadow: 0 0 10px #666;-moz-box-shadow: 0 0 10px #666;-o-box-shadow: 0 0 10px #666;box-shadow: 0 0 10px #666}
+#tetris{background-color:#000;opacity:0.8}
+#preview{background-color:#000; position:absolute; right:60px; top:50px;opacity:0.8}
+#level{position:absolute; top:10px; right:100px;; color:#FFF; font-size:22px;font-weight:bold;text-shadow:0 0 5px #CCC; font-family:"Comic Sans MS", cursive}
+.instruction{position:absolute; top:210px;width:150px;right:50px; color:#FFF; font-size:14px; line-height:20px}
+.instruction h3{ font-size:16px; padding-bottom:8px}
+.instruction img{width:40px; height:40px; cursor:pointer}
+.scoreArea{position:absolute;bottom:70px;right:60px; width:150px;text-align:center;}
+#score{font-size:60px; color:#F00;font-style:italic; font-weight:bold;text-shadow:0 0 4px #CCC}
+#show{position:absolute; top:0; display:none}
+.button {border:none;border-top: 1px solid #96d1f8;background: #65a9d7;background: -webkit-gradient(linear, left top, left bottom, from(#3e779d), to(#65a9d7));background: -moz-linear-gradient(top, #3e779d, #65a9d7);padding: 5px 10px;-webkit-border-radius: 8px;-moz-border-radius: 8px;border-radius: 8px;-webkit-box-shadow: rgba(0,0,0,1) 0 1px 0;-moz-box-shadow: rgba(0,0,0,1) 0 1px 0;box-shadow: rgba(0,0,0,1) 0 1px 0;text-shadow: rgba(0,0,0,.4) 0 1px 0;color: #fff;font-size: 14px;font-family:Georgia, serif;text-decoration: none;vertical-align: middle;cursor:pointer;position:absolute;bottom:20px;width:80px;}
+.button:hover {border-top-color: #3f789e;background: #3f789e;color: #ccc;}
+.button:active {border-top-color: #1b435e;background: #1b435e;}
+.stop{right:140px;}
+.restart{right:40px}
+.tips{position:absolute; right:0px; bottom:-26px;-moz-border-radius: 4px;-webkit-border-radius: 4px;-o-border-radius: 4px;border-radius: 4px;-moz-box-shadow: 0 0 5px black;-webkit-box-shadow: 0 0 5px black;-o-box-shadow: 0 0 5px black;box-shadow: 0 0 5px black; padding:3px 8px}
+/* 得分龙虎榜 */
+.rankingArea{-webkit-transition:top 1.5s ease;-moz-transition:top 1.5s ease;cursor:pointer; height:360px;left:50%;margin-left:-225px;position:absolute;top:-325px;width:470px;}
+.rankingArea .ranking{-moz-box-shadow:black 0px 0px 5px;-webkit-box-shadow:black 0px 0px 5px; -webkit-border-radius:20px;-moz-border-radius:20px; background-color:#FFF; height:300px; padding-top:30px;}
+.rankingArea:hover{top:0}
+.rankingArea .ranking table{width:380px; margin:0 auto;font-family: arial;background-color: #CDCDCD;font-size: 8pt;text-align: left;border-color: gray;}
+.rankingArea .ranking table thead tr th{background-color: #E6EEEE;border: 1px solid white;font-size:12px;padding: 4px;}
+.rankingArea .ranking table tbody tr td{color: #3D3D3D;padding: 4px;background-color: white;vertical-align: top;font-size:12px;}
+.rankingArea h5{position:absolute; bottom:0;font-size: 18px;left: 50%;margin: 0 0 0 -90px;border: 1px solid #666;width: 180px;height: 28px;line-height: 28px;text-align: center;-moz-border-radius-bottomleft: 15px;-webkit-border-bottom-left-radius: 15px;-moz-border-radius-bottomright: 15px;-webkit-border-bottom-right-radius: 15px;background: #1863C9;color: white;text-shadow: 0 0 1px white;border-bottom-left-radius: 15px 15px;border-bottom-right-radius: 15px 15px;}
+/* 遮罩层和弹出框 */
+#cover{width:100%; height:100%; background-color:#333;opacity:0.7; position:absolute;z-index:9;top:0;  display:none}
+#openWindow{width:280px; height:120px; border:3px #999 solid;-webkit-border-radius: 3px;-moz-border-radius: 3px;border-radius: 3px;position:absolute; top:50%; left:50%; margin:-75px 0 0 -160px; z-index:99; background-color:#FFF; font-size:12px; line-height:30px; padding:30px 0 0 50px; display:none}
+#openWindow #showScore{ color:#F00; font-style:italic; font-size:16px; padding:0 5px 0 5px; font-family:Arial}
+#openWindow input.submitButton{width:80px; height:25px; margin:10px 20px 0 0;}
+</style>
+</head>
+
+<body onkeydown="keydown(event)" onkeyup="keyup(event)">
+
+<div class="game">
+	<!--游戏区域-->
+	<canvas id="tetris" width="350" height="550">
+		你的浏览器不支持 Canvas 标签，请使用 Chrome 浏览器 或者 FireFox 浏览器
+	</canvas>
+    <!--预览区域-->
+    <canvas id="preview" width="150" height="150" >你的浏览器不支持 Canvas 标签，请使用 Chrome 浏览器 或者 FireFox 浏览器</canvas>
+    <!--当前等级-->
+    <p id="level">Level<span id="level_num">1</span></p>
+    <!--操作说明-->
+    <div class="instruction">
+        <p><img src="button/up.png" alt="上方向键" id="up" onclick="mouse_control(this.id)" /> ：变换形状</p>
+        <p><img src="button/left.png" alt="左方向键" id="left" onclick="mouse_control(this.id)" /> ：左移一格</p>
+        <p><img src="button/right.png" alt="右方向键" id="right" onclick="mouse_control(this.id)" /> ：右移一格</p>
+        <p><img src="button/down.png" alt="下方向键" id="down" onmousedown="mouse_control(this.id)" onmouseup="mouse_control('','mouseup')" /> ：按住会加速</p>
+        <p><img src="button/space.png" alt="空格键" id="space" onclick="mouse_control(this.id)" /> ：非常快地下落</p>
+    </div>
+    <!--分数区域-->
+    <div class="scoreArea">
+        <p id="score">0</p>
+    </div>
+    <input type="button" value="暂停" onclick="stop();this.blur()" id="stop_button" class="button stop"/>
+    <input type="button" value="重新开始" onclick="restart();this.blur()" id="restart_button" class="button restart"/>
+    <p class="tips">支持无键盘操作，可直接点击按钮进行操作喔。</p>
+</div>
+<!--debug显示区域-->
+<div style="width:300px; height:500px; border:#00F 1px solid" id="show"></div>
+<!--得分龙虎榜-->
+<div class="rankingArea">
+	<div class="ranking">
+        <table border="0" cellpadding="0" cellspacing="1" id="rankTable">
+        <thead>
+          <tr>
+            <th>排名</th>
+            <th>玩家</th>
+            <th>得分</th>
+            <th>游戏时间</th>
+            <th>创建日期</th>
+          </tr>
+       	</thead>
+        <tbody>
+       	</tbody>
+        </table>
+    </div>
+	<h5>得分龙虎榜</h5>
+</div>
+<!--遮罩层-->
+<div id="cover"></div>
+<!--弹出框-->
+<div id="openWindow">
+	<p>游戏结束，您的得分是<span id="showScore"></span>分</p>
+    <p><label>请输入您的大名：</label><input type="text" name="player" id="player" size="10"/></p>
+    <p><input type="button" value="提交"  onclick="submitScore()" class="submitButton" /><input type="button" value="取消" onclick="cancel()" class="submitButton" /></p>
+</div>
+<!--背景音乐-->
+<audio src="music/Korobeiniki.mp3" autoplay="autoplay" loop="loop" id="bgMusic">
+您的浏览器不支持 audio 标签。
+</audio>
+<!--消行音效-->
+<audio src="music/clearRow.mp3" id="clearRow">
+您的浏览器不支持 audio 标签。
+</audio>
+
+<script type="text/javascript">
+//俄罗斯方块类
+function tetris(){
+	//每一格的间距，也即一个小方块的尺寸
+	this.spacing=25;
+	//游戏区域的上下文
+	this.context=null;
+	//预览区域的上下文
+	this.preview=null;
+	//游戏得分
+	this.score=0;
+	//游戏的开始时间戳
+	this.startTime=0;
+	//游戏时间(秒为单位)
+	this.playTime=0;
+	//游戏分数等级
+	this.level=[0,100,300,600,1000,1500,2100,2800,3600,4500,5500,6600,7800,9100,10500,12000,13600];
+	//当前等级
+	this.currentLevel=1;
+	//升级后的速度提升比例
+	this.speedUpRate=0.7;
+	//得分显示区域的引用
+	this.scoreShow;
+	//游戏状态
+	this.status=true;
+	//延时执行下落动作的句柄
+	this.downDelay;
+	//标记正在快速下落状态的变量，以防在快速下落的过程中因为其他操作而导致速度变化
+	this.quickDown=false;
+	//游戏区域宽度
+	this.width=0;
+	//游戏区域高度
+	this.height=0;
+	//游戏区域行数
+	this.rows;
+	//游戏区域列数
+	this.cols;
+	//当前方块矩阵左上角相对于容器矩阵左上角的坐标
+	this.offset={x:0,y:0};
+	//当前方块在方块矩阵中所占位置的坐标集(都为4个)
+	this.coordinate=new Array(4);
+	//各方块的颜色（只有7种方块，最后那种颜色是容器背景色）
+	this.colors=["blue","fuchsia","#cff","red","orange","aqua","green","black"];
+	//各方块的原始形状（矩阵）
+	this.shape=[
+		[[1,1,1,0],[0,1,0,0],[0,0,0,0],[0,0,0,0]],     //T字型
+		[[1,1,1,1],[0,0,0,0],[0,0,0,0],[0,0,0,0]],     //一字型
+		[[1,1,0,0],[0,1,0,0],[0,1,0,0],[0,0,0,0]],     //L字型
+		[[1,1,0,0],[1,0,0,0],[1,0,0,0],[0,0,0,0]],     //反L型
+		[[1,0,0,0],[1,1,0,0],[0,1,0,0],[0,0,0,0]],     //S字型
+		[[0,1,0,0],[1,1,0,0],[1,0,0,0],[0,0,0,0]],     //反S型
+		[[1,1,0,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]],     //田字型
+	];
+	//各方块的变换形状（矩阵）
+	this.transform_shape=[
+		[[[1,1,1,0],[0,1,0,0],[0,0,0,0],[0,0,0,0]],[[0,0,1,0],[0,1,1,0],[0,0,1,0],[0,0,0,0]],[[0,0,0,0],[0,1,0,0],[1,1,1,0],[0,0,0,0]],[[1,0,0,0],[1,1,0,0],[1,0,0,0],[0,0,0,0]]],     //T字型
+		[[[1,1,1,1],[0,0,0,0],[0,0,0,0],[0,0,0,0]],[[0,1,0,0],[0,1,0,0],[0,1,0,0],[0,1,0,0]]],     //一字型
+		[[[1,1,0,0],[0,1,0,0],[0,1,0,0],[0,0,0,0]],[[0,0,1,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]],[[1,0,0,0],[1,0,0,0],[1,1,0,0],[0,0,0,0]],[[1,1,1,0],[1,0,0,0],[0,0,0,0],[0,0,0,0]]],    //L字型
+		[[[1,1,0,0],[1,0,0,0],[1,0,0,0],[0,0,0,0]],[[1,1,1,0],[0,0,1,0],[0,0,0,0],[0,0,0,0]],[[0,1,0,0],[0,1,0,0],[1,1,0,0],[0,0,0,0]],[[1,0,0,0],[1,1,1,0],[0,0,0,0],[0,0,0,0]]],     //反L型
+		[[[1,0,0,0],[1,1,0,0],[0,1,0,0],[0,0,0,0]],[[0,1,1,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]]],     //S字型
+		[[[0,1,0,0],[1,1,0,0],[1,0,0,0],[0,0,0,0]],[[1,1,0,0],[0,1,1,0],[0,0,0,0],[0,0,0,0]]],     //反S型
+		[[[1,1,0,0],[1,1,0,0],[0,0,0,0],[0,0,0,0]]],     //田字型
+	];
+	//容器矩阵
+	this.map;
+	//容器颜色矩阵
+	this.mapColor;
+	//当前等级对应的下落速度（500为初始下落速度）
+	this.normalSpeed=500;
+	//当前下落速度
+	this.speed=this.normalSpeed;
+	//当前方块的形状id
+	this.shape_id=0;
+	//当前方块的变换形状id
+	this.transform_shape_id=0;
+	//将会出现的方块的形状id
+	this.next_shape_id=7;       //7表示未定义
+	
+	//构造以方格为单位的初始容器矩阵和初始颜色矩阵
+	this.setMap=function(){
+		this.rows=parseInt(this.height/this.spacing,10);
+		this.cols=parseInt(this.width/this.spacing,10);
+		
+		this.map=new Array(this.cols);
+		this.mapColor=new Array(this.cols);
+		for(var i=0;i<this.cols;i++){               //构造列
+			this.map[i]=new Array(this.rows);
+			this.mapColor[i]=new Array(this.rows);
+			for(var j=0;j<this.rows;j++){           //构造行
+				this.map[i][j]=0;                   //0代表该位置上没有方块
+				this.mapColor[i][j]=7;              //7代表容器的背景色，因为只有0-6代表方块
+			}
+		}
+	}
+	
+	//调试模式
+	this.debug=function(){
+		var show=document.getElementById('show');
+		var content='';
+		for(var i=0;i<this.rows;i++){
+			for(var j=0;j<this.cols;j++){
+				content+=(this.map[j][i])+',';
+			}
+			content+='<br/>';
+		}
+		show.innerHTML=content;
+	}
+	
+	//获取当前方块在方块矩阵中所占位置的坐标集
+	this.getCoordinate=function(){
+		var matrix=this.transform_shape[this.shape_id][this.transform_shape_id];
+		/* 就是这里！ */
+		var rows=matrix.length;
+		var cols=matrix[0].length;
+		var z=0;
+		for(var i=0;i<rows;i++){
+			for(var j=0;j<cols;j++){
+				if(matrix[i][j]==1){
+					this.coordinate[z]=[j,i];
+					z++;
+				}
+			}
+		}
+	}	
+	
+	//方块下落
+	this.down=function(){
+		if(!this.status) return;
+		//尝试下落一格
+		this.offset.y+=1;
+		//若超出边缘或产生碰撞
+		if(this.beyond() || this.collision()){
+			//恢复偏移
+			this.offset.y-=1;
+			//设置一个数组，保存有可能被消行的行数（为了提高效率，不用遍历所有行）
+			var possible_full_row=new Array();
+			var index=0;                            //上面该数组的下标
+			//此方块加入容器矩阵
+			for(var i=0;i<this.coordinate.length;i++){
+				//从方块矩阵的坐标变换到容器坐标
+				var x=this.coordinate[i][0]+this.offset.x;
+				var y=this.coordinate[i][1]+this.offset.y;
+				//加入容器矩阵
+				this.map[x][y]=1;
+				//加入容器颜色矩阵
+				this.mapColor[x][y]=this.shape_id;
+				//将当前行加入可能被消行的数组
+				if(y>=0){
+					possible_full_row[index]=y;
+					index++;
+				}
+			}
+			
+			//记录本次消除的行数
+			var clearRowNum=0;
+			//检查是否可消行
+			for(var i=0;i<possible_full_row.length;i++){
+				if(this.rowFull(possible_full_row[i])) clearRowNum++;
+			}
+			//分段加分
+			switch(clearRowNum){
+				case 0:
+					break;
+				case 1:    
+					this.score+=10;
+					break;
+				case 2:
+					this.score+=30;
+					break;
+				case 3:
+					this.score+=60;
+					break;
+				case 4:
+					this.score+=100;
+					break;				
+			}
+			//显示最新分数
+			this.scoreShow.innerHTML=this.score;
+			//如果有消行的话，播放音效
+			if(clearRowNum!=0) document.getElementById('clearRow').play();
+			//判断分数是否进入下一等级
+			if(this.score>this.level[this.currentLevel]){
+				this.normalSpeed=this.normalSpeed*this.speedUpRate;
+				this.currentLevel++;
+				document.getElementById('level_num').innerHTML=this.currentLevel;
+			}
+			//重置canvas的变换为初始状态
+			this.context.restore();
+			//重新生产方块
+			this.born(); 
+			return false;
+		}
+		//可以下落
+		this.erase();
+		this.context.translate(0,this.spacing);
+		this.draw();
+		
+		//window.clearTimeout(this.downDelay);
+		var this_obj=this;
+		this.downDelay=window.setTimeout(function(){this_obj.down()},this.speed);
+	}
+	
+	//游戏区域绘制方块
+	this.draw=function(){
+		this.context.save();
+		var matrix=this.transform_shape[this.shape_id][this.transform_shape_id];
+		var rows=matrix.length;
+		var cols=matrix[0].length;
+		for(var i=0;i<rows;i++){
+			this.context.save();
+			for(var j=0;j<cols;j++){
+				if(matrix[i][j]==1){
+					this.context.fillRect(0,0,this.spacing,this.spacing);
+					this.context.strokeRect(0,0,this.spacing,this.spacing);
+				}
+				this.context.translate(this.spacing,0);
+			}
+			this.context.restore();
+			this.context.translate(0,this.spacing);
+		}
+		this.context.restore();
+	}
+	
+	//清除当前位置的方块
+	this.erase=function(){
+		this.context.save();
+		var matrix=this.transform_shape[this.shape_id][this.transform_shape_id];
+		var rows=matrix.length;
+		var cols=matrix[0].length;
+		for(var i=0;i<rows;i++){
+			this.context.save();
+			for(var j=0;j<cols;j++){
+				if(matrix[i][j]==1){
+					this.context.clearRect(0,0,this.spacing,this.spacing);
+				}
+				this.context.translate(this.spacing,0);
+			}
+			this.context.restore();
+			this.context.translate(0,this.spacing);
+		}
+		this.context.restore();
+	}
+
+	//预览区域绘制方块
+	this.drawPreview=function(){
+		this.preview.save();
+		var matrix=this.shape[this.next_shape_id];
+		var rows=matrix.length;
+		var cols=matrix[0].length;
+		for(var i=0;i<rows;i++){
+			this.preview.save();
+			for(var j=0;j<cols;j++){
+				if(matrix[i][j]==1){
+					this.preview.fillRect(0,0,this.spacing,this.spacing);
+					this.preview.strokeRect(0,0,this.spacing,this.spacing);
+				}
+				this.preview.translate(this.spacing,0);
+			}
+			this.preview.restore();
+			this.preview.translate(0,this.spacing);
+		}
+		this.preview.restore();
+	}
+		
+	//随机生产一个方块，放置到开始位置，重置下降速度，并开始下降
+	this.born=function(){
+		this.context.save();
+		
+		//计算总的方块种类数
+		var boxes=this.shape.length;
+		
+		//随机产生方块
+		if(this.next_shape_id==7){      //下一个出现的方块未定义（一开始的时候）
+			this.shape_id=parseInt(Math.random()*boxes+0,10);
+		}
+		else{
+			this.shape_id=this.next_shape_id;
+		}
+		//产生下一个将出现的方块
+		this.next_shape_id=parseInt(Math.random()*boxes+0,10);
+		//重置变换id
+		this.transform_shape_id=0;
+		
+		//设置预览区域方块的颜色
+		var gradient = this.context.createLinearGradient(0,0,this.spacing,this.spacing);
+		gradient.addColorStop(0,'#fff');                              
+		gradient.addColorStop(1,this.colors[this.next_shape_id]);     
+		this.preview.fillStyle=gradient;
+		this.preview.strokeStyle='#000';
+		//绘制预览区域
+		this.preview.save();
+		this.preview.translate(2*this.spacing,2*this.spacing);
+		this.preview.clearRect(0,0,4*this.spacing,4*this.spacing);
+		this.drawPreview();
+		this.preview.restore();
+		
+		//设置方块颜色
+		var gradient1 = this.context.createLinearGradient(0,0,this.spacing,this.spacing);         //创建线性渐变对象 
+		gradient1.addColorStop(0,'#fff');                         //设置渐变起始颜色为白色
+		gradient1.addColorStop(1,this.colors[this.shape_id]);     //设置渐变终止颜色为方块颜色
+		this.context.fillStyle=gradient1;                         //设置填充样式为渐变对象
+		this.context.strokeStyle='#000';                          //设置描边颜色为黑色
+		
+		//计算出一个居中的偏移量
+		var offsetX=parseInt(this.cols/2,10)-1;        
+		this.offset.x=offsetX;
+		this.offset.y=-1;
+		this.context.translate(offsetX*this.spacing,-this.spacing);
+		
+		//保存当前方块在方块矩阵中的坐标集
+		this.getCoordinate();
+		//绘制方块
+		this.draw();
+		
+		//若新产生的方块就有碰撞，则游戏结束
+		if(this.collision()){
+			//停止游戏
+			window.clearTimeout(this.downDelay);
+			this.status=false;
+			//计算本次游戏的持续时间
+			var endTime=(new Date()).valueOf();
+			this.playTime=parseInt((endTime-this.startTime)/1000,10);			
+			//弹出输入玩家姓名的窗口
+			this.inputName();
+			
+			return false;
+		}
+		//重置下降速度
+		this.speed=this.normalSpeed;
+		//重置快速下落的状态
+		this.quickDown=false;
+		//开始下降
+		this.down();
+	}
+	
+	//检查是否超出容器边缘
+	this.beyond=function(){
+		for(var i=0;i<this.coordinate.length;i++){
+			//从方块矩阵的坐标变换到容器坐标
+			var x=this.coordinate[i][0]+this.offset.x;
+			var y=this.coordinate[i][1]+this.offset.y;
+			//超出边缘
+			if(x<0 || x>=this.cols || y>=this.rows) return true;
+		}
+		//没有超出边缘
+		return false;
+	}
+	
+	//检查是否产生碰撞
+	this.collision=function(){
+		for(var i=0;i<this.coordinate.length;i++){
+			//从方块矩阵的坐标变换到容器坐标
+			var x=this.coordinate[i][0]+this.offset.x;
+			var y=this.coordinate[i][1]+this.offset.y;
+			//若该位置上已有方块，则说明碰撞
+			if(this.map[x][y]==1) return true;
+		}
+		//否则没有碰撞，可以移动或变换
+		return false;
+	}
+	
+	
+	//检查指定行是否已满，若已满就消掉
+	this.rowFull=function(row){
+		//检查是否已满
+		var cols=this.cols;             //用局部变量保存列数，遍历时可提高效率
+		var full=true;                  //先假定是满的，若发现该行中有任意一格是空的，则设为false
+		for(var i=0;i<cols;i++){
+			if(this.map[i][row]==0) full=false;
+		}
+		
+		//该行已满
+		if(full){
+			//添加消行前的闪烁效果(延时效果暂未实现)
+			/*this.context.restore();
+			this.context.save();
+			this.context.translate(0,row*this.spacing);
+			this.context.clearRect(0,0,cols*this.spacing,this.spacing);
+			for(var i=0;i<cols;i++){
+				var gradient = this.context.createLinearGradient(0,0,this.spacing,this.spacing);
+				gradient.addColorStop(0,'#fff');                              
+				gradient.addColorStop(1,this.colors[this.mapColor[i][row]]);     
+				this.context.fillStyle=gradient;
+				this.context.fillRect(0,0,this.spacing,this.spacing);
+				this.context.strokeRect(0,0,this.spacing,this.spacing);
+				this.context.translate(this.spacing,0);
+			}*/
+			
+			//消行
+			for(var j=row;j>0;j--){
+				for(var z=0;z<cols;z++){
+					this.map[z][j]=this.map[z][j-1];
+					this.mapColor[z][j]=this.mapColor[z][j-1];
+				}
+			}
+			//重置第一行为空
+			for(var i=0;i<cols;i++){
+				this.map[i][0]=0;
+				this.mapColor[i][0]=7;
+			}
+			//重绘
+			this.context.restore();
+			this.context.save();
+			for(var j=0;j<=row;j++){
+				this.context.save();
+				for(var z=0;z<cols;z++){
+					if(this.map[z][j]==1){            //该位置有方块
+						var gradient = this.context.createLinearGradient(0,0,this.spacing,this.spacing);
+						gradient.addColorStop(0,'#fff');                              
+						gradient.addColorStop(1,this.colors[this.mapColor[z][j]]);     
+						this.context.fillStyle=gradient;
+					}
+					else{                             //该位置无方块
+						this.context.fillStyle='#000';
+					}
+					this.context.fillRect(0,0,this.spacing,this.spacing);
+					this.context.strokeRect(0,0,this.spacing,this.spacing);
+					this.context.translate(this.spacing,0);
+				}
+				this.context.restore();
+				this.context.translate(0,this.spacing);
+			}
+			//加分
+			//this.score+=10;
+			return true;
+		}
+		//this.debug();
+		return false;
+	}
+		
+	//左移方块
+	this.left=function(){
+		if(!this.status) return;
+		//尝试左移
+		this.offset.x-=1;
+		//检测是否超出边缘或有碰撞
+		if(this.beyond() || this.collision()){
+			this.offset.x+=1;         //恢复偏移
+			return false;
+		}
+		//可以左移
+		this.erase();
+		this.context.translate(-this.spacing,0);
+		this.draw();
+	}
+	
+	//右移方块
+	this.right=function(){
+		if(!this.status) return;
+		//尝试右移
+		this.offset.x+=1;
+		//检测是否到边缘或有碰撞
+		if(this.beyond() || this.collision()){
+			this.offset.x-=1;         //恢复偏移
+			return false;
+		}
+		//可以右移
+		this.erase();
+		this.context.translate(this.spacing,0);
+		this.draw();
+	}
+	
+	//方块变换
+	this.transform=function(){
+		if(!this.status) return;
+		var current_transform_shape_id=this.transform_shape_id;      //先保存住现在的变换形状id
+		//尝试变换
+		this.transform_shape_id=(this.transform_shape_id+1)%this.transform_shape[this.shape_id].length;        //获取下一个变换形状id
+		this.getCoordinate();
+		//检测是否到边缘或有碰撞
+		if(this.beyond() || this.collision()){
+			this.transform_shape_id=current_transform_shape_id;       //恢复变换
+			this.getCoordinate();
+			return false;
+		}
+		//可以变换
+		this.transform_shape_id=current_transform_shape_id;
+		this.erase();
+		//绘制方块
+		this.transform_shape_id=(this.transform_shape_id+1)%this.transform_shape[this.shape_id].length;
+		this.draw();
+		
+	}
+	
+	//加速下降
+	this.speedUp=function(){
+		if(!this.status) return;
+		if(this.quickDown) return;
+		this.speed=50;
+	}
+	
+	//恢复正常速度
+	this.speedDown=function(){
+		if(!this.status) return;
+		if(this.quickDown) return;
+		this.speed=this.normalSpeed;
+		
+		window.clearTimeout(this.downDelay);
+		var this_obj=this;
+		this.downDelay=window.setTimeout(function(){this_obj.down()},this.speed);
+	}
+	
+	//马上下降
+	this.slideDown=function(){
+		if(!this.status) return;
+		this.quickDown=true;
+		this.speed=5;
+		
+		window.clearTimeout(this.downDelay);
+		var this_obj=this;
+		this.downDelay=window.setTimeout(function(){this_obj.down()},this.speed);
+	}
+	
+	//游戏结束时提示用户输入名字
+	this.inputName=function(){
+		//显示弹出框
+		$('#cover').fadeIn();
+		$('#openWindow').fadeIn();
+		//显示玩家得分
+		$('#showScore').html(this.score);
+		//使玩家名字的输入框获得焦点
+		$('#player').focus();
+	}
+	
+	//开始游戏
+	this.start=function(){
+		//重置容器矩阵和颜色矩阵
+		this.setMap();
+		//重置canvas
+		this.context.restore();
+		this.context.clearRect(0,0,this.width,this.height);
+		//重置分数
+		this.score=0;
+		this.scoreShow.innerHTML=this.score;
+		//重置游戏的开始时间戳
+		this.startTime=(new Date()).valueOf();
+		//重置初始速度
+		this.normalSpeed=500;
+		//消除之前的定时下落事件
+		window.clearTimeout(this.downDelay);
+		
+		this.born();
+	}
+}
+
+//获取游戏区域canvas
+var tetris_canvas=document.getElementById('tetris');
+var tetris_context=tetris_canvas.getContext('2d');
+//获取预览区域canvas
+var preview_canvas=document.getElementById('preview');
+var preview_context=preview_canvas.getContext('2d');
+
+//创建俄罗斯方块对象
+var tetris=new tetris();
+//配置参数
+tetris.context=tetris_context;          //游戏区域上下文
+tetris.width=tetris_canvas.width;       //游戏区域宽度
+tetris.height=tetris_canvas.height;     //游戏区域高度
+tetris.scoreShow=document.getElementById('score');        //分数区域
+tetris.preview=preview_context;        //预览区域的上下文
+
+//定义键盘操作事件
+function keydown(e){
+	var e = e||window.event;
+   	var currKey = e.keyCode||e.which||e.charCode;
+	switch(currKey){
+		case 37:             //左方向键
+			tetris.left();
+			break;
+		case 38:             //上方向键
+			e.preventDefault();            //阻止默认行为（屏幕往上滚动）
+			tetris.transform();
+			break;
+		case 39:             //右方向键
+			tetris.right();
+			break;
+		case 40:             //下方向键
+			e.preventDefault();            //阻止默认行为（屏幕往下滚动）
+			tetris.speedUp();
+			break;
+		case 32:             //空格键
+			e.preventDefault();            //阻止默认行为（屏幕往下滚动）
+			tetris.slideDown();
+			break;
+	}
+}
+function keyup(e){
+	var e = e||window.event;
+   	var currKey = e.keyCode||e.which||e.charCode;
+	switch(currKey){
+		case 40:             //下方向键
+			tetris.speedDown();
+			break;
+		case 32:             //空格键
+			e.preventDefault();              //阻止空格键放开时产生的默认事件，与keydown相对应（不做么做的话，firefox会在有滚动条的情况产生意外情况）
+			break;
+	}
+}
+
+//定义鼠标操作事件
+function mouse_control(id,action){
+	switch(id){
+		case 'left':
+			tetris.left();
+			break;
+		case 'right':
+			tetris.right();
+			break;
+		case 'up':
+			tetris.transform();
+			break;
+		case 'down':
+			tetris.speedUp();
+			break;
+		case 'space':
+			tetris.slideDown();
+			break;
+	}
+	if(action=='mouseup') tetris.speedDown();
+}
+
+//绑定键盘事件
+//document.body.onkeydown=keydown(event);
+
+//暂停和重新开始事件
+function stop(){
+	if(tetris.status){
+		tetris.status=false;
+		document.getElementById('stop_button').value='继续';
+		document.getElementById('bgMusic').pause();
+	}
+	else{
+		tetris.status=true;
+		tetris.down();
+		document.getElementById('stop_button').value='暂停';
+		document.getElementById('bgMusic').play();
+	}
+}
+function restart(){
+	tetris.status=true;
+	tetris.start();
+	document.getElementById('stop_button').value='暂停';
+	document.getElementById('bgMusic').play();
+}
+
+//开始游戏
+tetris.start();
+</script>
+<script type="text/javascript" src="js/jquery-1.6.1.js"></script>
+<script type="text/javascript" src="js/rank.js"></script>
+</body>
+</html>
